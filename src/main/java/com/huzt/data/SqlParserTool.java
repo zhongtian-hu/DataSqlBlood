@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 /**
  * jsqlparser解析SQL工具类
  * PlainSelect类不支持union、union all等请使用SetOperationList接口
- *
+ *啊
  */
 
 public class SqlParserTool {
