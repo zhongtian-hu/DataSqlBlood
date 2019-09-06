@@ -15,10 +15,10 @@
 引入图数据库保存结果数据信息,图形化显示数据血缘关系，使血缘图更加直观。
 
 #### 测试用例
-请关注test下的HiveBloodEngineTest与HiveSqlBloodFactoryTest。
+请关注test下的TableBloodEngineeTest与FieldBloodEngineeTest。
 
 #### 接口地址
-    接口类：BloodEngine，实现类：HiveBloodEngineImpl。（spring接入）
+    接口类：BloodEngine，实现类：BloodEngineImpl。（spring接入）
     工具类：SqlParserTool。（静态调用）
     
 #### 使用说明
