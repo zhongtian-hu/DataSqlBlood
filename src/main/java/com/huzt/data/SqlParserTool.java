@@ -1,9 +1,11 @@
 package com.huzt.data;
 
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.expression.BinaryExpression;
-import net.sf.jsqlparser.expression.CastExpression;
-import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.*;
+import net.sf.jsqlparser.expression.operators.relational.ExistsExpression;
+import net.sf.jsqlparser.expression.operators.relational.InExpression;
+import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
+import net.sf.jsqlparser.parser.CCJSqlParserManager;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -24,15 +26,13 @@ import net.sf.jsqlparser.statement.truncate.Truncate;
 import net.sf.jsqlparser.statement.update.Update;
 import net.sf.jsqlparser.statement.upsert.Upsert;
 
-import java.io.StringReader;
+import java.io.*;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * jsqlparser解析SQL工具类
  * PlainSelect类不支持union、union all等请使用SetOperationList接口
- *啊
+ *
  */
 
 public class SqlParserTool {
@@ -92,127 +92,38 @@ public class SqlParserTool {
      * @return
      * @throws JSQLParserException
      */
-    public static Statement getStatement(String sql) throws JSQLParserException {
-        Statement sqlStmt = CCJSqlParserUtil.parse(new StringReader(sql));
+    public static Statement getStmtbysql(String sql) throws JSQLParserException {
+
+        CCJSqlParserManager parserManager = new CCJSqlParserManager();
+        Statement sqlStmt = parserManager.parse(new StringReader(sql));
+        return sqlStmt;
+    }
+    public static Statement getStmtbyfile(String filepath) throws JSQLParserException {
+        File file = new File(filepath);//定义一个file对象，用来初始化FileReader
+        StringBuilder sb = new StringBuilder();//定义一个字符串缓存，将字符串存放缓存中
+
+        FileReader reader = null;//定义一个fileReader对象，用来初始化BufferedReader
+        try {
+            reader = new FileReader(file);
+            BufferedReader bReader = new BufferedReader(reader);//new一个BufferedReader对象，将文件内容读取到缓存
+
+            String s = "";
+            while ((s =bReader.readLine()) != null) {//逐行读取文件内容，不读取换行符和末尾的空格
+                sb.append(s + "\n");//将读取的字符串添加换行符后累加存放在缓存中
+            }
+            bReader.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        String sql = sb.toString();
+        CCJSqlParserManager parserManager = new CCJSqlParserManager();
+        Statement sqlStmt = parserManager.parse(new StringReader(sql.replace("\"","")));
         return sqlStmt;
     }
 
-    /**
-     * 获取tables的表名
-     * @param
-     * @return
-     */
-    public static Map<String,Object> getTables(SelectBody sel){
-        Map<String, Object> map= new HashMap<String, Object>();
-        PlainSelect plain = (PlainSelect) sel;
-        Table table = (Table)plain.getFromItem();
-        if(table.getAlias() != null){
-            map.put(table.getAlias().getName(),table.getName());
-        }
 
-        for(Join join : plain.getJoins()){
-            FromItem fromItem=join.getRightItem();
-            if (fromItem instanceof SubSelect) {
-                map.put(fromItem.getAlias().getName(), fromItem.toString());
-                //     map.put(fromItem.getAlias().getName(), getTables(((SubSelect) fromItem).getSelectBody()));
-            } else if(((Table)fromItem).getAlias()!=null){
-                map.put(((Table)fromItem).getAlias().getName(),((Table)fromItem).getName());
-            }
-        }
-        return map;
-    }
-
-    /**
-     * 获取join层级
-     * @param selectBody
-     * @return
-     */
-    public static List<Join> getJoins(SelectBody selectBody){
-        if(selectBody instanceof PlainSelect){
-            List<Join> joins =((PlainSelect) selectBody).getJoins();
-            return joins;
-        }
-        return new ArrayList<Join>();
-    }
-
-    /**
-     *
-     * @param selectBody
-     * @return
-     */
-    public static List<Table> getIntoTables(SelectBody selectBody){
-        if(selectBody instanceof PlainSelect){
-            List<Table> tables = ((PlainSelect) selectBody).getIntoTables();
-            return tables;
-        }
-        return new ArrayList<Table>();
-    }
-
-    /**
-     *
-     * @param selectBody
-     * @return
-     */
-    public static void setIntoTables(SelectBody selectBody,List<Table> tables){
-        if(selectBody instanceof PlainSelect){
-            ((PlainSelect) selectBody).setIntoTables(tables);
-        }
-    }
-
-
-
-    /**
-     * 获取FromItem不支持子查询操作
-     * @param selectBody
-     * @return
-     */
-    public static FromItem getFromItem(SelectBody selectBody){
-        if(selectBody instanceof PlainSelect){
-            FromItem fromItem = ((PlainSelect) selectBody).getFromItem();
-            return fromItem;
-        }else if(selectBody instanceof WithItem){
-            SqlParserTool.getFromItem(((WithItem) selectBody).getSelectBody());
-        }
-        return null;
-    }
-
-    /**
-     * 获取子查询
-     * @param selectBody
-     * @return
-     */
-    public static SubSelect getSubSelect(SelectBody selectBody){
-        if(selectBody instanceof PlainSelect){
-            FromItem fromItem = ((PlainSelect) selectBody).getFromItem();
-            if(fromItem instanceof SubSelect){
-                return ((SubSelect) fromItem);
-            }
-        }else if(selectBody instanceof WithItem){
-            SqlParserTool.getSubSelect(((WithItem) selectBody).getSelectBody());
-        }
-        return null;
-    }
-
-    /**
-     * 判断是否为多级子查询
-     * @param selectBody
-     * @return
-     */
-    public static boolean isMultiSubSelect(SelectBody selectBody){
-        if(selectBody instanceof PlainSelect){
-            FromItem fromItem = ((PlainSelect) selectBody).getFromItem();
-            if(fromItem instanceof SubSelect){
-                SelectBody subBody = ((SubSelect) fromItem).getSelectBody();
-                if(subBody instanceof PlainSelect){
-                    FromItem subFromItem = ((PlainSelect) subBody).getFromItem();
-                    if(subFromItem instanceof SubSelect){
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
 
     /**
      * 获取查询字段
@@ -220,152 +131,204 @@ public class SqlParserTool {
      * @return
      */
     public static void getSelectItems(SelectBody selectBody, List allColumnNames) {
+        if (selectBody instanceof PlainSelect) {
 
-        List<SelectItem> selectItemlist = ((PlainSelect)selectBody).getSelectItems();
-        SelectItem selectItem = null;
-        SelectExpressionItem selectExpressionItem = null;
-        Expression expression = null;
+            List<SelectItem> selectItemlist = ((PlainSelect)selectBody).getSelectItems();
+            SelectItem selectItem = null;
+            Expression expression  =null;
 
-        if (selectItemlist != null) {
-            for (int i = 0; i < selectItemlist.size(); i++) {
-                selectItem = selectItemlist.get(i);
-                SelectColumn column= new SelectColumn();
-                if (selectItem instanceof SelectExpressionItem)
-                {
-                    selectExpressionItem = (SelectExpressionItem) selectItemlist.get(i);
-                    column.expression=selectExpressionItem.getExpression().toString();
-                    expression=selectExpressionItem.getExpression();
-
-                    if(expression instanceof CastExpression){
-                        if (((CastExpression) expression).getLeftExpression() instanceof Column){
-                            column.sourcolumn.add(((CastExpression) expression).getLeftExpression().toString());
-                            if (selectExpressionItem.getAlias()!=null){
-                                column.alias = selectExpressionItem.getAlias().toString().replace("AS ","").replace("as ","");
-                            }else{
-                                column.alias =((CastExpression) expression).getLeftExpression().toString();
-                            }
-                        }else{
-                            getSrcColumn(((CastExpression) expression).getLeftExpression().toString(),column.sourcolumn);
-                            column.alias = selectExpressionItem.getAlias().toString().replace("AS ","").replace("as ","");
-                        }
-                    }else{
-                        if (expression instanceof Column){
-                            column.sourcolumn.add(expression.toString());
-                            if (selectExpressionItem.getAlias()!=null){
-                                column.alias = selectExpressionItem.getAlias().toString().replace("AS ","").replace("as ","");
-                            }else{
-                                column.alias =((Column) expression).getColumnName();
-                            }
-                        }else{
-                            getSrcColumn(expression.toString(),column.sourcolumn);
-                            column.alias = selectExpressionItem.getAlias().toString().replace("AS ","").replace("as ","");
-                        }
+            if (selectItemlist != null) {
+                for (int i = 0; i < selectItemlist.size(); i++) {
+                    selectItem = selectItemlist.get(i);
+                    SelectColumn column= new SelectColumn();
+                    expression=((SelectExpressionItem) selectItem).getExpression();
+                    getfromcolum(expression,column.fromName);
+                    column.expression.add(expression.toString());
+                    if (((SelectExpressionItem) selectItem).getAlias()!=null){
+                        column.NameParse = ((SelectExpressionItem) selectItem).getAlias().toString().replace("AS ","").replace("as ","");
+                    }else if (column.fromName.size()==1){
+                        Iterator<String > it = column.fromName.iterator();
+                        column.NameParse =it.next();
                     }
                     allColumnNames.add(column);
                 }
             }
-        }
-
-    }
-
-    public static void getColumnName(Expression expression, List allColumnNames) {
-
-        String columnName = null;
-        if(expression instanceof BinaryExpression){
-            //获得左边表达式
-            Expression leftExpression = ((BinaryExpression) expression).getLeftExpression();
-
-            //如果左边表达式为Column对象，则直接获得列名
-            if(leftExpression  instanceof Column){
-                //获得列名
-                columnName = ((Column) leftExpression).getFullyQualifiedName();
-                allColumnNames.add(columnName);
-            }
-            //否则，进行迭代
-            else if(leftExpression instanceof BinaryExpression){
-                getColumnName((BinaryExpression)leftExpression,allColumnNames);
-            }
-            //获得右边表达式，并分解
-            Expression rightExpression = ((BinaryExpression) expression).getRightExpression();
-            // Expression leftExpression2 = ((BinaryExpression) rightExpression).getLeftExpression();
-            if(rightExpression instanceof Column){
-                //获得列名
-                columnName = ((Column) rightExpression).getFullyQualifiedName();
-                allColumnNames.add(columnName);
-            }//否则，进行迭代
-            else if(rightExpression instanceof BinaryExpression){
-                getColumnName((BinaryExpression)rightExpression,allColumnNames);
-            }
-        }
-    }
-
-    public static void getSrcColumn(String source,List column)
-    {
-        Pattern pattern = Pattern.compile("([a-zA-Z]+[a-zA-Z0-9_.]+)");
-        Matcher m = pattern.matcher(source);
-        Set<String> set = new TreeSet<>();
-        String str = "";
-        while (m.find()) {
-            str = m.group(1);
-            if (!str.toUpperCase().equals("CASE") && !str.toUpperCase().equals("WHEN") && !str.toUpperCase().equals("THEN")  && !str.toUpperCase().equals("MIN")  && !str.toUpperCase().equals("MAX")  && !str.toUpperCase().equals("SUM")
-                    && !str.toUpperCase().equals("OR") && !str.toUpperCase().equals("AND")  && !str.toUpperCase().equals("ELSE")  && !str.toUpperCase().equals("NULL") && !str.toUpperCase().equals("END")  && !str.toUpperCase().equals("AVG") ){
-                set.add(str);
-            }
-        }
-        for (String value : set) {
-            column.add(value);
-        }
-    }
-
-    public static void getSrcTable(PlainSelect select, List<TableInfo>  tables, String parsel)
-    {
-        Table table = (Table)select.getFromItem();
-        if(table.getAlias() != null){
-            TableInfo fromtable=new TableInfo();
-            fromtable.alias=table.getAlias().getName();
-            fromtable.tablename=table.getName();
-            fromtable.schemaName=table.getSchemaName();
-            fromtable.tabletype="table";
-            fromtable.partable=parsel;
-            tables.add(fromtable);
-        }
-
-        if(select.getJoins()!= null) {
-            for(Join join : select.getJoins()){
-                TableInfo fromtable=new TableInfo();
-                FromItem fromItem=join.getRightItem();
-                if (fromItem instanceof SubSelect) {
-                    List <SelectColumn> columnlist=new ArrayList<SelectColumn>();
-                    getSelectItems(((SubSelect) fromItem).getSelectBody(),columnlist);
-                    for (int i=0;i<columnlist.size();i++){
-                        fromtable.columnname.add(columnlist.get(i).alias);
+        }else if(selectBody instanceof SetOperationList) {
+            SetOperationList setOperationList = (SetOperationList) selectBody;
+            List<SelectBody> selects = setOperationList.getSelects();
+            for (SelectBody subbody : selects) {
+                if (allColumnNames.size()==0){
+                    getSelectItems(subbody,allColumnNames);
+                }else {
+                    List<SelectColumn> sourcolumn =  new ArrayList<>();
+                    getSelectItems(subbody,sourcolumn);
+                    for (int i=0;i<allColumnNames.size();i++){
+                        for (String value : sourcolumn.get(i).fromName){
+                            ((SelectColumn)(allColumnNames.get(i))).fromName.add(value);
+                        }
+                        ((SelectColumn)(allColumnNames.get(i))).expression.add(sourcolumn.get(i).expression.get(0));
                     }
-                    fromtable.tablename=fromItem.getAlias().getName();
-                    fromtable.tabletype="SubSelect";
-                    fromtable.alias=fromItem.getAlias().getName();
-                    fromtable.partable=parsel;
-                    tables.add(fromtable);
-                    getSrcTable((PlainSelect)((SubSelect) fromItem).getSelectBody(),tables,fromItem.getAlias().getName());
-                } else {
-                    if(((Table)fromItem).getAlias()!=null)
-                    {
-                        fromtable.alias=fromItem.getAlias().getName();
-                    }else {
-                        fromtable.alias = ((Table)fromItem).getSchemaName()+"."+((Table)fromItem).getName();
-                    }
-                    fromtable.schemaName=((Table)fromItem).getSchemaName();
-                    fromtable.tablename=((Table)fromItem).getName();
-                    fromtable.tabletype="table";
-                    fromtable.partable=parsel;
-                    tables.add(fromtable);
-
                 }
             }
         }
-    }
-    public static void main(String[] args) throws JSQLParserException {
-        Statement sqlStmt = CCJSqlParserUtil.parse(new StringReader("show databases"));
 
     }
+    public static void getfromcolum(Expression expression, Set<String> allColumnNames) {
+        if (expression instanceof Column){
+            allColumnNames.add(expression.toString());
+        }else if (expression instanceof CastExpression){
+            getfromcolum(((CastExpression)expression).getLeftExpression(),allColumnNames);
+        }else if (expression instanceof Function){
+            for (Expression subexp : ((Function)expression).getParameters().getExpressions()){
+                getfromcolum(subexp,allColumnNames);
+            }
+        }else if (expression instanceof Parenthesis){
+            getfromcolum(((Parenthesis)expression).getExpression(),allColumnNames);
+        }else if (expression instanceof CaseExpression){
+            getfromcolum(((CaseExpression)expression).getElseExpression(),allColumnNames);
+            getfromcolum(((CaseExpression)expression).getSwitchExpression(),allColumnNames);
+            for (WhenClause caseexp : ((CaseExpression)expression).getWhenClauses()){
+                getfromcolum(caseexp.getThenExpression(),allColumnNames);
+                getfromcolum(caseexp.getWhenExpression(),allColumnNames);
+            }
 
+        }else if (expression instanceof BinaryExpression){
+            getfromcolum(((BinaryExpression)expression).getLeftExpression(),allColumnNames);
+            getfromcolum(((BinaryExpression)expression).getRightExpression(),allColumnNames);
+
+        }else if (expression instanceof InExpression){
+            getfromcolum(((InExpression)expression).getLeftExpression(),allColumnNames);
+
+        }else if (expression instanceof NotExpression){
+            getfromcolum(((NotExpression)expression).getExpression(),allColumnNames);
+
+        }else if (expression instanceof IsNullExpression){
+            getfromcolum(((IsNullExpression)expression).getLeftExpression(),allColumnNames);
+
+        }else if (expression instanceof ExistsExpression){
+            getfromcolum(((ExistsExpression)expression).getRightExpression(),allColumnNames);
+
+        }else{
+            // System.out.println(((CaseExpression)expression).getElseExpression());
+            //         System.out.println(expression);
+            //        System.out.println(expression instanceof BinaryExpression);
+            //System.out.println(JSONObject.toJSONString(expression));
+            //         if (expression!=null &&expression.toString().contains(" IS ")){
+
+            //             System.out.println(((BinaryExpression)expression).getLeftExpression());
+            //          }
+
+        }
+    }
+
+    public static SelectInfo getSelectInfo(SelectBody selectBody)
+    {
+        SelectInfo sel=new SelectInfo();
+        if (selectBody instanceof PlainSelect) {
+            getSelectItems(selectBody,sel.columnlist);
+            getexp(selectBody,sel.tables,"",sel.columnlist);
+        }else if(selectBody instanceof SetOperationList) {
+            SetOperationList setOperationList = (SetOperationList) selectBody;
+            List<SelectBody> selects = setOperationList.getSelects();
+            for (SelectBody subbody : selects) {
+                getSelectItems(selectBody,sel.columnlist);
+                getexp(subbody,sel.tables,"",sel.columnlist);
+            }
+        }
+        return sel;
+    }
+    public static void gettableinfo(Table table,List  tables,String parsel,List col) {
+        TableInfo fromtable=new TableInfo();
+        if(table.getAlias() != null){
+            fromtable.alias=table.getAlias().getName();
+        }else {
+            fromtable.alias=table.getSchemaName()==null?table.getName():table.getSchemaName()+"."+table.getName();
+        }
+        fromtable.tablename=table.getName();
+        fromtable.schemaName=table.getSchemaName();
+        String viewstr="";//= MetadataDb.getcolumns(table.getSchemaName(),table.getName(),fromtable.columnname);
+        // System.out.println(viewstr);
+        if (viewstr==null){
+        }else {
+            //         try {
+            //              Statement stmt =getStmtbysql(viewstr);
+            //               getexp(((CreateView)stmt).getSelect().getSelectBody(),tables,fromtable.alias);
+            //         } catch (JSQLParserException e) {
+//                e.printStackTrace();
+            //          }
+        }
+        fromtable.partable=parsel;
+        tables.add(fromtable);
+    }
+    public static void getsubinfo(SubSelect subbod,List  tables,String parsel,List col) {
+        SelectInfo sub=new SelectInfo();
+        if (col.size()==0)
+            getSelectItems(subbod.getSelectBody(),col);
+        else
+            getSelectItems(subbod.getSelectBody(),sub.columnlist);
+        getexp(subbod.getSelectBody(),sub.tables,subbod.getAlias().toString(),col);
+        sub.partable=parsel;
+        sub.alias=subbod.getAlias().toString();
+        tables.add(sub);
+    }
+    public static void getjoininfo(SubJoin subjoin,List  tables,String parsel,List col) {
+        FromItem joinleft = subjoin.getLeft();
+        if (joinleft instanceof SubSelect) {
+            getsubinfo((SubSelect)joinleft,tables,parsel,col);
+        }
+        if (joinleft instanceof Table) {
+            gettableinfo((Table) joinleft,tables,parsel,col);
+        }
+        if (joinleft instanceof SubJoin) {
+            getjoininfo((SubJoin) joinleft,tables,parsel,col);
+        }
+        for (Join join :  subjoin.getJoinList()) {
+            FromItem fromItem = join.getRightItem();
+            if (fromItem instanceof SubSelect) {
+                getsubinfo((SubSelect)fromItem,tables,parsel,col);
+            }
+            if (fromItem instanceof Table) {
+                gettableinfo((Table) fromItem,tables,parsel,col);
+            }
+            if (fromItem instanceof SubJoin) {
+                getjoininfo((SubJoin) fromItem,tables,parsel,col);
+            }
+        }
+    }
+    public static void getexp(SelectBody select,List  tables,String parsel,List col) {
+        if (select instanceof PlainSelect) {
+            FromItem fromleft = ((PlainSelect) select).getFromItem();
+            if (fromleft instanceof SubSelect) {
+                getsubinfo((SubSelect)fromleft,tables,parsel,col);
+            }
+            if (fromleft instanceof SubJoin) {
+                getjoininfo((SubJoin) fromleft,tables,parsel,col);
+            }
+            if (fromleft instanceof Table) {
+                gettableinfo((Table) fromleft,tables,parsel,col);
+            }
+            if (((PlainSelect) select).getJoins() != null) {
+                for (Join join : ((PlainSelect) select).getJoins()) {
+                    FromItem fromItem = join.getRightItem();
+                    if (fromItem instanceof SubSelect) {
+                        getsubinfo((SubSelect)fromItem,tables,parsel,col);
+                    }
+                    if (fromItem instanceof Table) {
+                        gettableinfo((Table) fromItem,tables,parsel,col);
+                    }
+                    if (fromItem instanceof SubJoin) {
+                        getjoininfo((SubJoin) fromleft,tables,parsel,col);
+                    }
+                }
+            }
+        }
+        if (select instanceof SetOperationList) {
+            SetOperationList setOperationList = (SetOperationList) select;
+            List<SelectBody> selects = setOperationList.getSelects();
+            for (SelectBody subbody : selects) {
+                getexp(subbody, tables,parsel,col);
+            }
+
+        }
+    }
 }

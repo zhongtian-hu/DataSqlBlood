@@ -4,11 +4,12 @@ package com.huzt.data;
  * 处理sql语句中的字段,常量字段的sourcolumn长度位0
  */
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class SelectColumn {
-    public String expression;
-    public List<String> sourcolumn =  new ArrayList<>();
-    public String alias;
+    public List<String> expression =  new ArrayList<>();
+    public Set<String> fromName =  new HashSet<>();
+    public String NameParse;
 }
-
