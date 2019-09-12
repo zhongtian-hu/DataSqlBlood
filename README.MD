@@ -42,7 +42,8 @@
 
 结果：
 测试SQL的解析信息如下:
-{
+
+    {
     "alias": "selecttmp",
     "columnlist": [
         {
