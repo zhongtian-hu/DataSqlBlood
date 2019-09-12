@@ -1,30 +1,20 @@
 package com.huzt.data;
 
+import com.huzt.TableInfo;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.ExistsExpression;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserManager;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.Statement;
-import net.sf.jsqlparser.statement.alter.Alter;
-import net.sf.jsqlparser.statement.create.index.CreateIndex;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
 import net.sf.jsqlparser.statement.create.view.CreateView;
-import net.sf.jsqlparser.statement.delete.Delete;
-import net.sf.jsqlparser.statement.drop.Drop;
-import net.sf.jsqlparser.statement.execute.Execute;
-import net.sf.jsqlparser.statement.insert.Insert;
-import net.sf.jsqlparser.statement.merge.Merge;
-import net.sf.jsqlparser.statement.replace.Replace;
 
+import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.*;
-import net.sf.jsqlparser.statement.truncate.Truncate;
-import net.sf.jsqlparser.statement.update.Update;
-import net.sf.jsqlparser.statement.upsert.Upsert;
 
 import java.io.*;
 import java.util.*;
@@ -40,54 +30,7 @@ public class SqlParserTool {
 
 
     /**
-     * 由于jsqlparser没有获取SQL类型的原始工具，并且在下面操作时需要知道SQL类型，所以编写此工具方法
-     * @param sql sql语句
-     * @return sql类型，
-     * @throws JSQLParserException
-     */
-    public static SqlType getSqlType(String sql) throws JSQLParserException {
-        Statement sqlStmt = CCJSqlParserUtil.parse(new StringReader(sql));
-        if (sqlStmt instanceof Alter) {
-            return SqlType.ALTER;
-        } else if (sqlStmt instanceof CreateIndex) {
-            return SqlType.CREATEINDEX;
-        } else if (sqlStmt instanceof CreateTable) {
-            return SqlType.CREATETABLE;
-        } else if (sqlStmt instanceof CreateView) {
-            return SqlType.CREATEVIEW;
-        } else if (sqlStmt instanceof Delete) {
-            return SqlType.DELETE;
-        } else if (sqlStmt instanceof Drop) {
-            return SqlType.DROP;
-        } else if (sqlStmt instanceof Execute) {
-            return SqlType.EXECUTE;
-        } else if (sqlStmt instanceof Insert) {
-            return SqlType.INSERT;
-        } else if (sqlStmt instanceof Merge) {
-            return SqlType.MERGE;
-        } else if (sqlStmt instanceof Replace) {
-            return SqlType.REPLACE;
-        } else if (sqlStmt instanceof Select) {
-            return SqlType.SELECT;
-        } else if (sqlStmt instanceof Truncate) {
-            return SqlType.TRUNCATE;
-        } else if (sqlStmt instanceof Update) {
-            return SqlType.UPDATE;
-        } else if (sqlStmt instanceof Upsert) {
-            return SqlType.UPSERT;
-        } else {
-            return SqlType.NONE;
-        }
-    }
-
-    /**
-     * 获取sql操作接口,与上面类型判断结合使用
-     * example:
-     * String sql = "create table a(a string)";
-     * SqlType sqlType = SqlParserTool.getSqlType(sql);
-     * if(sqlType.equals(SqlType.SELECT)){
-     *     Select statement = (Select) SqlParserTool.getStatement(sql);
-     *  }
+     * 根据SQL语句获取sql操作接口
      * @param sql
      * @return
      * @throws JSQLParserException
@@ -98,6 +41,12 @@ public class SqlParserTool {
         Statement sqlStmt = parserManager.parse(new StringReader(sql));
         return sqlStmt;
     }
+    /**
+     * 根据SQL文件获取sql操作接口
+     * @param filepath
+     * @return
+     * @throws JSQLParserException
+     */
     public static Statement getStmtbyfile(String filepath) throws JSQLParserException {
         File file = new File(filepath);//定义一个file对象，用来初始化FileReader
         StringBuilder sb = new StringBuilder();//定义一个字符串缓存，将字符串存放缓存中
@@ -128,7 +77,6 @@ public class SqlParserTool {
     /**
      * 获取查询字段
      * @param selectBody
-     * @return
      */
     public static void getSelectItems(SelectBody selectBody, List allColumnNames) {
         if (selectBody instanceof PlainSelect) {
@@ -140,7 +88,7 @@ public class SqlParserTool {
             if (selectItemlist != null) {
                 for (int i = 0; i < selectItemlist.size(); i++) {
                     selectItem = selectItemlist.get(i);
-                    SelectColumn column= new SelectColumn();
+                    com.huzt.SelectColumn column= new com.huzt.SelectColumn();
                     expression=((SelectExpressionItem) selectItem).getExpression();
                     getfromcolum(expression,column.fromName);
                     column.expression.add(expression.toString());
@@ -160,19 +108,25 @@ public class SqlParserTool {
                 if (allColumnNames.size()==0){
                     getSelectItems(subbody,allColumnNames);
                 }else {
-                    List<SelectColumn> sourcolumn =  new ArrayList<>();
+                    List<com.huzt.SelectColumn> sourcolumn =  new ArrayList<>();
                     getSelectItems(subbody,sourcolumn);
                     for (int i=0;i<allColumnNames.size();i++){
                         for (String value : sourcolumn.get(i).fromName){
-                            ((SelectColumn)(allColumnNames.get(i))).fromName.add(value);
+                            ((com.huzt.SelectColumn)(allColumnNames.get(i))).fromName.add(value);
                         }
-                        ((SelectColumn)(allColumnNames.get(i))).expression.add(sourcolumn.get(i).expression.get(0));
+                        ((com.huzt.SelectColumn)(allColumnNames.get(i))).expression.add(sourcolumn.get(i).expression.get(0));
                     }
                 }
             }
         }
 
     }
+
+    /**
+     * 获取查询引用的原表字段
+     * @param expression
+     * @return allColumnNames
+     */
     public static void getfromcolum(Expression expression, Set<String> allColumnNames) {
         if (expression instanceof Column){
             allColumnNames.add(expression.toString());
@@ -221,9 +175,15 @@ public class SqlParserTool {
         }
     }
 
-    public static SelectInfo getSelectInfo(SelectBody selectBody)
+    /**
+     * 获取sql的查询结果接口
+     * @param selectBody
+     * @return SelectInfo
+     * @throws JSQLParserException
+     */
+    public static com.huzt.SelectInfo getSelectInfo(SelectBody selectBody)
     {
-        SelectInfo sel=new SelectInfo();
+        com.huzt.SelectInfo sel=new com.huzt.SelectInfo();
         if (selectBody instanceof PlainSelect) {
             getSelectItems(selectBody,sel.columnlist);
             getexp(selectBody,sel.tables,"",sel.columnlist);
@@ -237,6 +197,43 @@ public class SqlParserTool {
         }
         return sel;
     }
+
+    /**
+     * 获取sql的查询分析结果
+     * @param sql
+     * @return SelectInfo
+     * @throws JSQLParserException
+     */
+    public static com.huzt.SelectInfo getSelectInfo(String sql) throws JSQLParserException
+    {
+        com.huzt.SelectInfo resul=null;
+        Statement stmt = getStmtbysql(sql);
+        if (stmt instanceof Select) {
+            Select select = (Select) stmt;
+            SelectBody selectBody = select.getSelectBody();
+            resul=SqlParserTool.getSelectInfo(selectBody);
+            resul.alias="selecttmp";
+        }else if (stmt instanceof Insert) {
+            SelectBody selectBody = ((Insert)stmt).getSelect().getSelectBody();
+            resul=SqlParserTool.getSelectInfo(selectBody);
+            resul.alias=((Insert)stmt).getTable().getFullyQualifiedName();
+        }else if (stmt instanceof CreateView) {
+            SelectBody selectBody = ((CreateView)stmt).getSelect().getSelectBody();
+            resul=SqlParserTool.getSelectInfo(selectBody);
+            resul.alias=((CreateView)stmt).getView().getFullyQualifiedName();
+        }else if (stmt instanceof CreateTable) {
+            SelectBody selectBody = ((CreateTable)stmt).getSelect().getSelectBody();
+            resul=SqlParserTool.getSelectInfo(selectBody);
+            resul.alias=((CreateTable)stmt).getTable().getFullyQualifiedName();
+        }
+        return resul;
+    }
+    /**
+     * 获取sql的查询的表信息
+     * @param table
+     * @return col
+     * @throws JSQLParserException
+     */
     public static void gettableinfo(Table table,List  tables,String parsel,List col) {
         TableInfo fromtable=new TableInfo();
         if(table.getAlias() != null){
@@ -246,22 +243,28 @@ public class SqlParserTool {
         }
         fromtable.tablename=table.getName();
         fromtable.schemaName=table.getSchemaName();
-        String viewstr="";//= MetadataDb.getcolumns(table.getSchemaName(),table.getName(),fromtable.columnname);
+        String viewstr= MetadataDb.getcolumns(table.getSchemaName(),table.getName(),fromtable.columnname);
         // System.out.println(viewstr);
         if (viewstr==null){
         }else {
-            //         try {
-            //              Statement stmt =getStmtbysql(viewstr);
-            //               getexp(((CreateView)stmt).getSelect().getSelectBody(),tables,fromtable.alias);
-            //         } catch (JSQLParserException e) {
-//                e.printStackTrace();
-            //          }
+            try {
+                Statement stmt =getStmtbysql(viewstr);
+                getexp(((CreateView)stmt).getSelect().getSelectBody(),tables,fromtable.alias,col);
+            } catch (JSQLParserException e) {
+                e.printStackTrace();
+            }
         }
         fromtable.partable=parsel;
         tables.add(fromtable);
     }
+    /**
+     * 获取sql的子查询信息
+     * @param subbod
+     * @return col,tables,parsel
+     * @throws JSQLParserException
+     */
     public static void getsubinfo(SubSelect subbod,List  tables,String parsel,List col) {
-        SelectInfo sub=new SelectInfo();
+        com.huzt.SelectInfo sub=new com.huzt.SelectInfo();
         if (col.size()==0)
             getSelectItems(subbod.getSelectBody(),col);
         else
@@ -271,6 +274,10 @@ public class SqlParserTool {
         sub.alias=subbod.getAlias().toString();
         tables.add(sub);
     }
+    /**
+     * 获取sql的JOIN查询信息
+     * @param subjoin
+     */
     public static void getjoininfo(SubJoin subjoin,List  tables,String parsel,List col) {
         FromItem joinleft = subjoin.getLeft();
         if (joinleft instanceof SubSelect) {
@@ -295,6 +302,10 @@ public class SqlParserTool {
             }
         }
     }
+    /**
+     * 获取sql的详细信息入口
+     * @param select
+     */
     public static void getexp(SelectBody select,List  tables,String parsel,List col) {
         if (select instanceof PlainSelect) {
             FromItem fromleft = ((PlainSelect) select).getFromItem();
