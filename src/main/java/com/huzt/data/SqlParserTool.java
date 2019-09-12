@@ -149,23 +149,13 @@ public class SqlParserTool {
         }else if (expression instanceof ExistsExpression){
             getfromcolum(((ExistsExpression)expression).getRightExpression(),allColumnNames);
 
-        }else{
-            // System.out.println(((CaseExpression)expression).getElseExpression());
-            //         System.out.println(expression);
-            //        System.out.println(expression instanceof BinaryExpression);
-            //System.out.println(JSONObject.toJSONString(expression));
-            //         if (expression!=null &&expression.toString().contains(" IS ")){
-
-            //             System.out.println(((BinaryExpression)expression).getLeftExpression());
-            //          }
-
         }
     }
 
     /**
      * 获取sql的查询结果接口
      */
-    public static SelectInfo getSelectInfo(SelectBody selectBody)
+    private static SelectInfo getSelectInfo(SelectBody selectBody)
     {
         SelectInfo sel=new SelectInfo();
         if (selectBody instanceof PlainSelect) {
