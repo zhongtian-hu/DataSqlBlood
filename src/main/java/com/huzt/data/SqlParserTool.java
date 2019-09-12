@@ -31,7 +31,7 @@ public class SqlParserTool {
     /**
      * 根据SQL语句获取sql操作接口
      */
-    public static Statement getStmtbysql(String sql) throws JSQLParserException {
+    private static Statement getStmtbysql(String sql) throws JSQLParserException {
 
         CCJSqlParserManager parserManager = new CCJSqlParserManager();
         Statement sqlStmt = parserManager.parse(new StringReader(sql));
@@ -67,7 +67,7 @@ public class SqlParserTool {
 
 
 
-    public static void getSelectItems(SelectBody selectBody, List allColumnNames) {
+    private static void getSelectItems(SelectBody selectBody, List allColumnNames) {
         if (selectBody instanceof PlainSelect) {
 
             List<SelectItem> selectItemlist = ((PlainSelect)selectBody).getSelectItems();
@@ -113,9 +113,8 @@ public class SqlParserTool {
 
     /**
      * 获取查询引用的原表字段
-     * @param expression
      */
-    public static void getfromcolum(Expression expression, Set<String> allColumnNames) {
+    private static void getfromcolum(Expression expression, Set<String> allColumnNames) {
         if (expression instanceof Column){
             allColumnNames.add(expression.toString());
         }else if (expression instanceof CastExpression){
@@ -165,7 +164,6 @@ public class SqlParserTool {
 
     /**
      * 获取sql的查询结果接口
-     * @param selectBody
      */
     public static SelectInfo getSelectInfo(SelectBody selectBody)
     {
@@ -186,9 +184,6 @@ public class SqlParserTool {
 
     /**
      * 获取sql的查询分析结果
-     * @param sql
-     * @return SelectInfo
-     * @throws JSQLParserException
      */
     public static SelectInfo getSelectInfo(String sql) throws JSQLParserException
     {
@@ -216,9 +211,8 @@ public class SqlParserTool {
     }
     /**
      * 获取sql的查询的表信息
-     * @param table
      */
-    public static void gettableinfo(Table table,List  tables,String parsel,List col) {
+    private static void gettableinfo(Table table,List  tables,String parsel,List col) {
         TableInfo fromtable=new TableInfo();
         if(table.getAlias() != null){
             fromtable.alias=table.getAlias().getName();
@@ -243,9 +237,8 @@ public class SqlParserTool {
     }
     /**
      * 获取sql的子查询信息
-     * @param subbod
      */
-    public static void getsubinfo(SubSelect subbod,List  tables,String parsel,List col) {
+    private static void getsubinfo(SubSelect subbod,List  tables,String parsel,List col) {
         SelectInfo sub=new SelectInfo();
         if (col.size()==0)
             getSelectItems(subbod.getSelectBody(),col);
@@ -258,9 +251,8 @@ public class SqlParserTool {
     }
     /**
      * 获取sql的JOIN查询信息
-     * @param subjoin
      */
-    public static void getjoininfo(SubJoin subjoin,List  tables,String parsel,List col) {
+    private static void getjoininfo(SubJoin subjoin,List  tables,String parsel,List col) {
         FromItem joinleft = subjoin.getLeft();
         if (joinleft instanceof SubSelect) {
             getsubinfo((SubSelect)joinleft,tables,parsel,col);
@@ -286,9 +278,8 @@ public class SqlParserTool {
     }
     /**
      * 获取sql的详细信息入口
-     * @param select
      */
-    public static void getexp(SelectBody select,List  tables,String parsel,List col) {
+    private static void getexp(SelectBody select,List  tables,String parsel,List col) {
         if (select instanceof PlainSelect) {
             FromItem fromleft = ((PlainSelect) select).getFromItem();
             if (fromleft instanceof SubSelect) {
