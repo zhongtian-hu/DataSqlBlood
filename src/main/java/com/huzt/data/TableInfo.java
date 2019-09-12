@@ -1,4 +1,4 @@
-package com.huzt;
+package com.huzt.data;
 
 import java.util.ArrayList;
 import java.util.List;

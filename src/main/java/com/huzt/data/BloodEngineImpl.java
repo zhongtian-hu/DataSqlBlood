@@ -1,7 +1,4 @@
 package com.huzt.data;
-import com.huzt.SelectColumn;
-import com.huzt.SelectInfo;
-import com.huzt.TableInfo;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -10,7 +7,7 @@ import java.util.Set;
 
 public class BloodEngineImpl implements BloodEngine{
 
-    public    void getSelectTBlood(SelectInfo select, BloodNode parnode, List<BloodNode> nodes, Set<BloodEdge> edges, int level)  {
+    private    void getSelectTBlood(SelectInfo select, BloodNode parnode, List<BloodNode> nodes, Set<BloodEdge> edges, int level)  {
         level=level+1;
         for (Object tabinfo : select.tables){
             if (tabinfo instanceof TableInfo){
@@ -28,7 +25,7 @@ public class BloodEngineImpl implements BloodEngine{
         }
 
     }
-    public static   void getSelectFBlood(SelectInfo select,BloodNode parnode,List<BloodNode> nodes,Set<BloodEdge> edges,int level)  {
+    private    void getSelectFBlood(SelectInfo select,BloodNode parnode,List<BloodNode> nodes,Set<BloodEdge> edges,int level)  {
         level=level+1;
         for (SelectColumn colinfo : select.columnlist){
             BloodNode top =select.alias.contains(".")?new BloodNode(select.alias.split("\\.")[0],select.alias.split("\\.")[1],colinfo.NameParse.contains(".")?colinfo.NameParse.split("\\.")[1]:colinfo.NameParse,level):new BloodNode("temp",select.alias,colinfo.NameParse.contains(".")?colinfo.NameParse.split("\\.")[1]:colinfo.NameParse,level);

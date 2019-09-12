@@ -1,5 +1,4 @@
 package com.huzt.data;
-import com.huzt.SelectInfo;
 
 import java.util.List;
 
@@ -14,7 +13,6 @@ public interface BloodEngine {
      * 根据sql获取解析结果
      * @param sqls
      * @return	sql解析结果
-     * @throws Exception
      */
     public List<SelectInfo> parser(List<String> sqls) throws Exception;
 

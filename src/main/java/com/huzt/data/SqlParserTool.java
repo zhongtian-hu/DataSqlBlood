@@ -1,6 +1,5 @@
 package com.huzt.data;
 
-import com.huzt.TableInfo;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.relational.ExistsExpression;
@@ -31,9 +30,6 @@ public class SqlParserTool {
 
     /**
      * 根据SQL语句获取sql操作接口
-     * @param sql
-     * @return
-     * @throws JSQLParserException
      */
     public static Statement getStmtbysql(String sql) throws JSQLParserException {
 
@@ -43,9 +39,6 @@ public class SqlParserTool {
     }
     /**
      * 根据SQL文件获取sql操作接口
-     * @param filepath
-     * @return
-     * @throws JSQLParserException
      */
     public static Statement getStmtbyfile(String filepath) throws JSQLParserException {
         File file = new File(filepath);//定义一个file对象，用来初始化FileReader
@@ -74,10 +67,6 @@ public class SqlParserTool {
 
 
 
-    /**
-     * 获取查询字段
-     * @param selectBody
-     */
     public static void getSelectItems(SelectBody selectBody, List allColumnNames) {
         if (selectBody instanceof PlainSelect) {
 
@@ -88,7 +77,7 @@ public class SqlParserTool {
             if (selectItemlist != null) {
                 for (int i = 0; i < selectItemlist.size(); i++) {
                     selectItem = selectItemlist.get(i);
-                    com.huzt.SelectColumn column= new com.huzt.SelectColumn();
+                    SelectColumn column= new SelectColumn();
                     expression=((SelectExpressionItem) selectItem).getExpression();
                     getfromcolum(expression,column.fromName);
                     column.expression.add(expression.toString());
@@ -108,13 +97,13 @@ public class SqlParserTool {
                 if (allColumnNames.size()==0){
                     getSelectItems(subbody,allColumnNames);
                 }else {
-                    List<com.huzt.SelectColumn> sourcolumn =  new ArrayList<>();
+                    List<SelectColumn> sourcolumn =  new ArrayList<>();
                     getSelectItems(subbody,sourcolumn);
                     for (int i=0;i<allColumnNames.size();i++){
                         for (String value : sourcolumn.get(i).fromName){
-                            ((com.huzt.SelectColumn)(allColumnNames.get(i))).fromName.add(value);
+                            ((SelectColumn)(allColumnNames.get(i))).fromName.add(value);
                         }
-                        ((com.huzt.SelectColumn)(allColumnNames.get(i))).expression.add(sourcolumn.get(i).expression.get(0));
+                        ((SelectColumn)(allColumnNames.get(i))).expression.add(sourcolumn.get(i).expression.get(0));
                     }
                 }
             }
@@ -125,7 +114,6 @@ public class SqlParserTool {
     /**
      * 获取查询引用的原表字段
      * @param expression
-     * @return allColumnNames
      */
     public static void getfromcolum(Expression expression, Set<String> allColumnNames) {
         if (expression instanceof Column){
@@ -178,12 +166,10 @@ public class SqlParserTool {
     /**
      * 获取sql的查询结果接口
      * @param selectBody
-     * @return SelectInfo
-     * @throws JSQLParserException
      */
-    public static com.huzt.SelectInfo getSelectInfo(SelectBody selectBody)
+    public static SelectInfo getSelectInfo(SelectBody selectBody)
     {
-        com.huzt.SelectInfo sel=new com.huzt.SelectInfo();
+        SelectInfo sel=new SelectInfo();
         if (selectBody instanceof PlainSelect) {
             getSelectItems(selectBody,sel.columnlist);
             getexp(selectBody,sel.tables,"",sel.columnlist);
@@ -204,9 +190,9 @@ public class SqlParserTool {
      * @return SelectInfo
      * @throws JSQLParserException
      */
-    public static com.huzt.SelectInfo getSelectInfo(String sql) throws JSQLParserException
+    public static SelectInfo getSelectInfo(String sql) throws JSQLParserException
     {
-        com.huzt.SelectInfo resul=null;
+        SelectInfo resul=null;
         Statement stmt = getStmtbysql(sql);
         if (stmt instanceof Select) {
             Select select = (Select) stmt;
@@ -231,8 +217,6 @@ public class SqlParserTool {
     /**
      * 获取sql的查询的表信息
      * @param table
-     * @return col
-     * @throws JSQLParserException
      */
     public static void gettableinfo(Table table,List  tables,String parsel,List col) {
         TableInfo fromtable=new TableInfo();
@@ -260,11 +244,9 @@ public class SqlParserTool {
     /**
      * 获取sql的子查询信息
      * @param subbod
-     * @return col,tables,parsel
-     * @throws JSQLParserException
      */
     public static void getsubinfo(SubSelect subbod,List  tables,String parsel,List col) {
-        com.huzt.SelectInfo sub=new com.huzt.SelectInfo();
+        SelectInfo sub=new SelectInfo();
         if (col.size()==0)
             getSelectItems(subbod.getSelectBody(),col);
         else
